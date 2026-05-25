@@ -26,7 +26,7 @@ def main():
         initial_temperature_c=25.0,
         ambient_temperature_c=25.0,
         thermal_capacity_j_per_k=75_000.0,
-        cooling_coeff_w_per_k=12.0,
+        cooling_coeff_w_per_k=80.0,
         dt_hours=1.0,
     )
 
