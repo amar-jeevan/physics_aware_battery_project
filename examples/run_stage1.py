@@ -34,6 +34,7 @@ def main():
     results = run_simulation(generation_kw, load_kw, battery)
 
     output_dir = PROJECT_ROOT / "results"
+    output_dir.mkdir(parents=True, exist_ok=True)
     results.to_csv(output_dir / "stage1_results.csv", index=False)
     plot_results(results, output_dir=output_dir)
 
