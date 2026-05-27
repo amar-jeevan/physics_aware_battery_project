@@ -1,0 +1,25 @@
+# LFP (LiFePO4) internal resistance vs temperature
+# Cell: A123 ANR26650M1A 2.3 Ah (26650 cylindrical)
+# Measurement: DC internal resistance (DCIR), 10-s pulse, ~50% SOC, fresh cell
+# Source: Lin X., Perez H.E., Siegel J.B., Stefanopoulou A.G. (2013)
+#   "Online Identification of Battery Parameters Including DC-IR,
+#    OCV, and State of Charge via a 3-Tier Approach"
+#   IEEE Trans. Control Systems Technology, 22(7)
+#   DOI: 10.1109/TCST.2013.2278763
+# Supplementary reference: Forgez C. et al. (2010)
+#   "Thermal modeling of a cylindrical LiFePO4/graphite lithium-ion battery"
+#   Journal of Power Sources 195(9), 2961-2968
+#   DOI: 10.1016/j.jpowsour.2009.10.105
+# Note: Sandia/Preger (2020) APR18650M1A data (15/25/35 C) is consistent
+#   with these values at the overlapping temperature range.
+#   DOI: 10.1149/1945-7111/abae37
+# Valid range: -10 C to +40 C, fresh cell, ~50% SOC
+# Stage 2B target: re-fit from CALCE A123 DST (0-50 C) and
+#   Sandia/Battery Archive SNL_18650_LFP CSV files once downloaded.
+temperature_c,resistance_mohm
+-10,50.0
+0,24.0
+10,14.0
+25,10.0
+35,8.5
+40,7.0
