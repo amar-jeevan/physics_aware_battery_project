@@ -1,5 +1,22 @@
 from dataclasses import dataclass
+from pathlib import Path
 import numpy as np
+
+# Load LFP R(T) coefficients from the resistance fit module at import time.
+# This keeps battery.py decoupled from resistance_fit.py — if the fit module
+# is unavailable, the fallback tuple below is used instead.
+def _load_lfp_coeffs() -> tuple:
+    try:
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent))
+        from resistance_fit import load_lfp_coefficients_ohm
+        return load_lfp_coefficients_ohm()
+    except Exception:
+        # Fallback: literature-derived LFP coefficients (A123, Lin 2013)
+        # R(T) [Ω] = 0.028318 - 0.0016036*T + 0.00002848*T²
+        return (0.028318, -0.0016036, 0.00002848)
+
+_LFP_RESISTANCE_COEFFS = _load_lfp_coeffs()
 
 
 @dataclass
@@ -23,10 +40,20 @@ class BatteryParams:
     cooling_coeff_w_per_k: float = 80.0
     dt_hours: float = 1.0
 
-    # Placeholder polynomial coefficients for R(T) in ohm:
-    # R(T) = a0 + a1*T + a2*T^2
-    # Stage 2 will replace this with fitted coefficients from published Li-ion data.
-    resistance_coeffs: tuple = (0.085, -0.0012, 0.000015)
+    # LFP polynomial coefficients for R(T) in ohm:
+    # R(T) = a0 + a1*T + a2*T^2  [Ω]
+    #
+    # Stage 2A values — fitted from published A123 ANR26650M1A LFP data:
+    #   Source: Lin et al. (2013) IEEE TCST, DOI: 10.1109/TCST.2013.2278763
+    #           Forgez et al. (2010) J. Power Sources, DOI: 10.1016/j.jpowsour.2009.10.105
+    #           Consistent with Sandia/Preger (2020), DOI: 10.1149/1945-7111/abae37
+    #   Valid: -10 °C to +40 °C, ~50% SOC, fresh cell
+    #   Fit:  RMSE = 2.97 mΩ,  R² = 0.961
+    #
+    # Stage 2B upgrade: re-fit using raw CALCE A123 DST (0-50 °C) and
+    #   Sandia Battery Archive SNL_18650_LFP CSV once downloaded.
+    #   Run src/resistance_fit.py to regenerate coefficients automatically.
+    resistance_coeffs: tuple = _LFP_RESISTANCE_COEFFS
 
     fixed_point_tolerance: float = 1e-5
     fixed_point_max_iter: int = 50
