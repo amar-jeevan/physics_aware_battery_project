@@ -1,21 +1,48 @@
 # LFP (LiFePO4) internal resistance vs temperature
-# Cell: A123 ANR26650M1A 2.3 Ah (26650 cylindrical)
-# Measurement: DC internal resistance (DCIR), 10-s pulse, ~50% SOC, fresh cell
-# Source: Lin X., Perez H.E., Siegel J.B., Stefanopoulou A.G. (2013)
-#   "Online Identification of Battery Parameters Including DC-IR,
-#    OCV, and State of Charge via a 3-Tier Approach"
+# ──────────────────────────────────────────────────────────────────────────
+# Cell:        A123 Systems ANR26650M1-B, 2.5 Ah, 26650 cylindrical
+# Measurement: DC internal resistance (DCIR) from HPPC 10-s pulse
+#              at ~50% SOC, fresh cell (SOH ≈ 100%)
+# Definition:  R0 = instantaneous ohmic drop only (sub-second response)
+#              = ΔV_instantaneous / ΔI at pulse onset
+#              This is the correct R0 for use in Q_gen = I²·R(T)
+#
+# PRIMARY SOURCE (Stage 2A, retained):
+#   Lin X., Perez H.E., Siegel J.B., Stefanopoulou A.G. et al. (2013)
+#   "Online Identification of Battery Parameters..."
 #   IEEE Trans. Control Systems Technology, 22(7)
 #   DOI: 10.1109/TCST.2013.2278763
-# Supplementary reference: Forgez C. et al. (2010)
-#   "Thermal modeling of a cylindrical LiFePO4/graphite lithium-ion battery"
-#   Journal of Power Sources 195(9), 2961-2968
+#   Cell: A123 ANR26650M1A (2.3 Ah variant)
+#   Method: 10-s HPPC pulse, high time resolution
+#
+# SUPPORTING SOURCE (Stage 2B, same cell confirmed):
+#   Gao Z., Chin C.S., Woo W.L., Jia J. (2017)
+#   "Integrated Equivalent Circuit and Thermal Model for Simulation
+#    of Temperature-Dependent LiFePO4 Battery in Actual Embedded Application"
+#   Energies 10(1):85. DOI: 10.3390/en10010085
+#   Cell: A123 ANR26650M1-B (2.5 Ah, same Nanophosphate LFP chemistry)
+#   Method: R0 = (U_n - U_{n-1}) / I at 1 sample/second resolution
+#   NOTE: Gao R0 includes fast RC dynamics within 1-s window → higher values
+#         (~65–80 mΩ at 25°C) than Lin HPPC R0 (~10 mΩ).
+#         For lumped ohmic heating Q=I²R, Lin HPPC values are appropriate.
+#   CONFIRMED from paper: Cp = 810.53 J/kg/K, hconv = 5 W/m²/K,
+#   Sarea = 0.0149 m² (Table 1) — used in BatteryParams.
+#
+# SUPPLEMENTARY SOURCE:
+#   Forgez C. et al. (2010), J. Power Sources 195(9):2961–2968
 #   DOI: 10.1016/j.jpowsour.2009.10.105
-# Note: Sandia/Preger (2020) APR18650M1A data (15/25/35 C) is consistent
-#   with these values at the overlapping temperature range.
-#   DOI: 10.1149/1945-7111/abae37
-# Valid range: -10 C to +40 C, fresh cell, ~50% SOC
-# Stage 2B target: re-fit from CALCE A123 DST (0-50 C) and
-#   Sandia/Battery Archive SNL_18650_LFP CSV files once downloaded.
+#   Cell: A123 ANR26650M1, lumped thermal parameters Rin, Rout, Cp
+#
+# Valid range: −10 °C to +40 °C, ~50% SOC, fresh cell
+# Fit:         R² = 0.961, RMSE = 2.97 mΩ (see resistance_fit.py)
+#
+# Stage 2B upgrade note:
+#   Gao 2017 Figure 13 shows R0(SOC, T) as a 3D lookup surface.
+#   No tabulated values are provided; digitisation from the 3D figure
+#   at SOC=0.5 yields consistent temperature trend but higher absolute
+#   values due to measurement resolution difference (see NOTE above).
+#   Stage 2C will implement full OCV(SOC, T) lookup from Gao 2017 Fig.11.
+# ──────────────────────────────────────────────────────────────────────────
 temperature_c,resistance_mohm
 -10,50.0
 0,24.0

@@ -36,6 +36,23 @@ class BatteryParams:
     initial_temperature_c: float = 25.0
     ambient_temperature_c: float = 25.0
 
+    # Thermal parameters — sourced from Gao et al. 2017, Table 1
+    # (same cell: A123 ANR26650M1-B)
+    #
+    # Single-cell values from paper:
+    #   Cp          = 810.53 J/kg/K  (measured, Table 1)
+    #   m_cell      = 76 g = 0.076 kg
+    #   C_cell      = 0.076 × 810.53 = 61.6 J/K per cell
+    #   hconv       = 5 W/m²/K  (natural convection, still air, Table 1)
+    #   Sarea       = 0.0149 m²  (26650 surface area, Table 1)
+    #   h_cell      = 5 × 0.0149 = 0.0745 W/K per cell
+    #   τ_cell      = 61.6 / 0.0745 = 827 s ≈ 14 min (single cell, still air)
+    #
+    # Pack-level scaling (for a 120 kWh / 400 V system):
+    #   ~14,500 cells → C_pack ≈ 14,500 × 61.6 ≈ 893,000 J/K
+    #   For a single-module (representative) model, 75,000 J/K (~1,200 cells)
+    #   h = 80 W/K corresponds to forced-air cooling at pack level.
+    #   Adjust both values linearly if modelling a different pack size.
     thermal_capacity_j_per_k: float = 75_000.0
     cooling_coeff_w_per_k: float = 80.0
     dt_hours: float = 1.0

@@ -1,0 +1,32 @@
+# LFP OCV vs SOC at multiple temperatures
+# ──────────────────────────────────────────────────────────────────────────
+# Cell:    A123 Systems ANR26650M1-B LFP 26650
+# Source:  Gao Z. et al. (2017), Energies 10(1):85
+#          DOI: 10.3390/en10010085, Figure 11 (3D OCV-SOC surface)
+#          and Figure 10 (2D OCV-SOC curves at 5/15/25/35/45°C)
+#
+# Method:  Pulse Discharge Test (PDT) with 45-min relaxation per SOC step.
+#          11 OCV points per temperature, 10% SOC intervals (0.0 to 1.0).
+#          Values digitised from Figure 10a (2D curve family).
+#
+# Usage:   Stage 2C — replace constant nominal_voltage_v with OCV(SOC, T)
+#          lookup using scipy.interpolate.RegularGridInterpolator or
+#          numpy.interp at fixed temperature.
+#
+# NOTE:    Values below are approximate digitisations from the paper figures.
+#          Accuracy ±10 mV. For higher accuracy, download the Gao/Chin
+#          IEEE DataPort dataset (DOI: 10.21227/36wq-1d84) when accessible.
+# ──────────────────────────────────────────────────────────────────────────
+# soc, ocv_5C, ocv_15C, ocv_25C, ocv_35C, ocv_45C
+soc,ocv_5C_V,ocv_15C_V,ocv_25C_V,ocv_35C_V,ocv_45C_V
+0.0,3.00,3.02,3.03,3.03,3.04
+0.1,3.20,3.22,3.24,3.25,3.26
+0.2,3.25,3.26,3.27,3.28,3.29
+0.3,3.27,3.28,3.29,3.30,3.30
+0.4,3.28,3.29,3.30,3.31,3.31
+0.5,3.29,3.30,3.31,3.32,3.32
+0.6,3.30,3.31,3.32,3.33,3.33
+0.7,3.31,3.32,3.33,3.33,3.34
+0.8,3.32,3.33,3.34,3.35,3.35
+0.9,3.38,3.40,3.42,3.43,3.44
+1.0,3.55,3.57,3.58,3.59,3.60

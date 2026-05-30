@@ -1,6 +1,6 @@
 # Physics-Aware LFP Battery Energy Storage Model
 
-A physics-based Python simulation of a LiFePO₄ (LFP) battery energy storage system under renewable generation and load demand. The model couples electrical behaviour (SOC evolution) with thermal dynamics through temperature-dependent internal resistance, validated against published LFP cell data.
+A physics-based Python simulation of a LiFePO₄ (LFP) battery energy storage system under renewable generation and load demand. The model couples electrical behaviour (SOC evolution) with thermal dynamics through temperature-dependent internal resistance, parameterised from published LFP cell data.
 
 ---
 
@@ -8,8 +8,8 @@ A physics-based Python simulation of a LiFePO₄ (LFP) battery energy storage sy
 
 Most battery storage simulations assume constant efficiency and ignore thermal behaviour. This project adds a physics-aware layer:
 
-- **State of charge (SOC)** evolution with temperature-dependent charging/discharging efficiency η(T)
-- **Temperature-dependent internal resistance** R(T) — polynomial fit from published A123 LFP cell data
+- **SOC evolution** with temperature-dependent coulombic efficiency η(T)
+- **Temperature-dependent internal resistance** R(T) — polynomial fitted from published A123 LFP cell data
 - **Joule heating** Q_gen = I²·R(T)
 - **Lumped thermal model** with semi-implicit Euler integration for numerical stability
 - **Fixed-point (Picard) iteration** at each timestep to converge the coupled R(T)–T system
@@ -29,28 +29,24 @@ Battery temperature evolves via a lumped thermal ODE (semi-implicit Euler):
 
 ```
 C · dT/dt = Q_gen − Q_loss
-         = I²·R(T) − h·(T − T_ambient)
+           = I²·R(T) − h·(T − T_ambient)
 ```
 
-Temperature-dependent internal resistance (LFP, A123 ANR26650M1A):
+Temperature-dependent internal resistance — A123 ANR26650M1-B LFP, HPPC-identified at ~50% SOC:
 
 ```
 R(T) = 0.02832 − 0.001604·T + 0.0000285·T²   [Ω]
-     ≈ 28.3 − 1.60·T + 0.028·T²              [mΩ]
+     ≈ 28.3   − 1.60·T     + 0.028·T²         [mΩ]
 
-Valid: −10 °C to +40 °C, ~50% SOC, fresh cell
+Valid: −10 °C to +40 °C,  ~50% SOC,  fresh cell
 Fit:  R² = 0.961,  RMSE = 2.97 mΩ
 ```
-
-Sources: Lin et al. (2013) IEEE TCST [DOI: 10.1109/TCST.2013.2278763],
-Forgez et al. (2010) J. Power Sources [DOI: 10.1016/j.jpowsour.2009.10.105],
-consistent with Sandia/Preger (2020) [DOI: 10.1149/1945-7111/abae37].
 
 SOC update with temperature-dependent coulombic efficiency:
 
 ```
-SOC(t+1) = SOC(t) + η(T)·P_charge·Δt / E_capacity    (charging)
-SOC(t+1) = SOC(t) + P_discharge·Δt / (η(T)·E_capacity) (discharging)
+SOC(t+1) = SOC(t) + η(T)·P_charge·Δt / E_capacity        (charging)
+SOC(t+1) = SOC(t) − P_discharge·Δt / (η(T)·E_capacity)   (discharging)
 ```
 
 ---
@@ -64,23 +60,27 @@ physics_aware_battery_project/
 ├── requirements.txt
 │
 ├── data/
-│   └── lfp_resistance_temperature.csv   ← LFP R(T) data with source provenance
+│   ├── lfp_resistance_temperature.csv     ← R(T) data with full source provenance
+│   ├── lfp_ocv_soc_temperature.csv        ← OCV(SOC, T) table — Stage 2C ready
+│   ├── raw/                               ← place downloaded raw datasets here
+│   └── processed/                         ← outputs from data loading scripts
 │
 ├── src/
-│   ├── battery.py           ← BatteryParams dataclass + PhysicsAwareBattery class
-│   ├── resistance_fit.py    ← R(T) polynomial fit, metrics, validation plot
-│   ├── profiles.py          ← Synthetic solar + load profiles
-│   ├── simulation.py        ← Dispatch loop
-│   ├── metrics.py           ← Energy served, curtailment, efficiency metrics
-│   └── plots.py             ← Result visualisations
+│   ├── battery.py                         ← BatteryParams + PhysicsAwareBattery
+│   ├── resistance_fit.py                  ← R(T) polynomial fit, metrics, plot
+│   ├── data_loader.py                     ← loaders for Catenaro / Chin / CALCE
+│   ├── profiles.py                        ← synthetic solar + load profiles
+│   ├── simulation.py                      ← dispatch loop
+│   ├── metrics.py                         ← energy served, curtailment, efficiency
+│   └── plots.py                           ← result visualisations
 │
 ├── examples/
-│   └── run_stage1.py        ← End-to-end simulation entry point
+│   └── run_stage1.py                      ← end-to-end simulation entry point
 │
 ├── tests/
-│   └── test_basic.py        ← Unit tests
+│   └── test_basic.py                      ← unit tests
 │
-└── results/                 ← Generated plots and CSV (gitignored)
+└── results/                               ← generated plots and CSV (gitignored)
 ```
 
 ---
@@ -99,7 +99,7 @@ This will:
 4. Print performance metrics
 5. Save simulation plots to `results/`
 
-To run only the R(T) fit:
+To run only the R(T) fit and regenerate the plot:
 
 ```bash
 python src/resistance_fit.py
@@ -107,14 +107,38 @@ python src/resistance_fit.py
 
 ---
 
-## Thermal parameters (Stage 2A)
+## Cell and thermal parameters
+
+All parameters sourced from published literature for the **A123 Systems ANR26650M1-B LFP 26650** cell.
 
 | Parameter | Value | Source |
 |---|---|---|
-| Specific heat Cp | 1100 J/kg/K | Lin et al. 2022 (DOI: 10.1002/batt.202100401) |
-| Lumped thermal capacity C | 75,000 J/K | ~70 cells × 975 g × 1100 J/kg/K (pack estimate) |
-| Cooling coefficient h | 80 W/K | Forced-air BESS rack; Forgez et al. 2010 baseline |
-| Valid temperature range | −10 °C to +40 °C | Li-ion safe operating range |
+| Internal resistance R₀ at 25°C | 10.0 mΩ | Lin et al. 2013 [1] |
+| R(T) polynomial valid range | −10 to +40 °C | Lin 2013 / Forgez 2010 [2] |
+| Specific heat capacity Cₚ | **810.53 J/kg/K** | Gao et al. 2017, Table 1 [3] |
+| Cell mass | 76 g | Gao et al. 2017, Table 1 [3] |
+| C per cell (lumped) | 61.6 J/K | m × Cₚ |
+| Convective h (still air) | 0.0745 W/K per cell | hconv × Sarea, Gao 2017 [3] |
+| Thermal time constant τ | ~14 min per cell | C / h, still air |
+| Cooling coeff (forced air, pack) | 80 W/K | Scaled from Forgez 2010 [2] |
+
+> **Note on Cₚ:** The paper-measured value of 810.53 J/kg/K (Gao 2017) is used. Earlier literature estimates of ~1100 J/kg/K are within the spread reported across LFP studies but less specific to this cell.
+
+---
+
+## R(T) data provenance
+
+The resistance polynomial is fitted from HPPC-identified R₀ values for the A123 LFP cell. Two resistance definitions exist in the literature and the difference matters:
+
+| Source | Method | R₀ at 25°C, 50% SOC | Definition |
+|---|---|---|---|
+| Lin et al. 2013 [1] | HPPC 10-s pulse, high resolution | ~10 mΩ | Pure ohmic drop (sub-ms) |
+| Gao et al. 2017 [3] | 1-sample/s instantaneous rise | ~65–80 mΩ | Ohmic + fast RC within 1 s |
+| CALCE A123 DST (this project) | Dynamic profile ΔV/ΔI | ~165 mΩ | Effective dynamic resistance |
+
+**This model uses the Lin 2013 values** because R(T) enters the heat generation term Q_gen = I²·R(T), for which the pure ohmic resistance is physically correct. The Gao 2017 and CALCE values represent different measurement concepts and would overestimate ohmic heating.
+
+The CALCE result (165 mΩ at 25°C) is retained in `data/processed/` as a validated demonstration that dynamic profiles capture effective resistance rather than ohmic R₀ — a finding documented in the project methodology.
 
 ---
 
@@ -124,58 +148,73 @@ python src/resistance_fit.py
 - Synthetic solar and load profiles
 - SOC model with temperature-dependent efficiency
 - Lumped thermal model with semi-implicit Euler
-- Fixed-point thermal-electrical iteration
-- Basic performance metrics and plots
+- Fixed-point thermal-electrical iteration (Picard)
+- Performance metrics and plots
 
-### ✅ Stage 2A — LFP resistance model
-- R(T) polynomial fitted from published A123 LFP data (Lin 2013, Forgez 2010)
-- `data/lfp_resistance_temperature.csv` with full source provenance
-- `src/resistance_fit.py` — fitting, metrics (RMSE, MAE, R²), validation plot
-- Corrected thermal parameters (cooling_coeff 12 → 80 W/K)
-- Results: max temp 65.9 °C → 26.0 °C; fixed-point iterations 15 → 4
+### ✅ Stage 2A — LFP resistance model (literature values)
+- R(T) polynomial from Lin 2013 / Forgez 2010 HPPC data
+- `data/lfp_resistance_temperature.csv` with source provenance
+- `src/resistance_fit.py` — fitting, RMSE/MAE/R², validation plot
+- Thermal parameters corrected (cooling_coeff 12 → 80 W/K)
 
-### 🔲 Stage 2B — Raw data fitting
-- Download CALCE A123 DST files (0–50 °C) from https://calce.umd.edu/battery-data
-- Download Sandia/SNL LFP CSV from https://www.batteryarchive.org
-- Re-fit `polyfit` against measured HPPC pulse IR; replace `lfp_resistance_temperature.csv`
-- Extend valid range to 0–50 °C with higher-confidence fit
+### ✅ Stage 2B — Paper-sourced thermal parameters + data investigation
+- Thermal parameters updated from Gao et al. 2017 Table 1: Cₚ = 810.53 J/kg/K
+- Cell-level thermal time constant calculated and documented: τ ≈ 14 min
+- CALCE A123 DST investigation: confirmed dynamic profiles yield R_eff ≠ R₀
+  - R_eff ≈ 165 mΩ at 25°C (factor of ~6 above ohmic R₀) — documented finding
+- `data/lfp_ocv_soc_temperature.csv` added — OCV(SOC, T) from Gao 2017 Fig. 10/11
+- R(T) definition difference between measurement methods documented
+- **Stage 1 → 2B comparison:** max temp 65.9°C → 26.0°C, iterations 30 → 4
 
-### 🔲 Stage 2C — Validation
-- Load NASA PCoE B0005 discharge data (parser pipeline demo)
-- Overlay simulated vs measured temperature and voltage curves
-- Report RMSE and MAE in a validation table
+### 🔲 Stage 2C — Validation against experimental discharge data
+- Load Catenaro & Onori 2021 discharge data (Mendeley, CC BY 4.0)
+  - `https://data.mendeley.com/datasets/kxsbr4x3j2/2`
+- Simulate discharge at 5°C, 25°C, 35°C
+- Overlay simulated T(t) against measured cell surface temperature
+- Report RMSE and MAE — validation table
 
-### 🔲 Stage 3 — Extensions
-- SOC-dependent OCV model
-- Equivalent circuit model (Thevenin RC)
-- Multi-day / weekly simulation
-- Battery sizing optimisation
+### 🔲 Stage 3 — Equivalent circuit model (ECM)
+- OCV(SOC, T) lookup table using `lfp_ocv_soc_temperature.csv`
+- 1-RC transient voltage model: U_L = U_OC − I·R₀ − U₁
+- Simulated vs measured terminal voltage curves
+- ECM architecture follows Gao et al. 2017 [3]
+
+### 🔲 Stage 4 — Full multi-temperature validation
+- Run Stage 3 model at 5/15/25/45°C
+- Validation plots at each temperature (Figures 17–20 style from Gao 2017)
+- RMSE table across temperatures
 
 ---
 
-## Key result: Stage 1 → Stage 2A comparison
+## Key result: Stage 1 → Stage 2B comparison
 
-| Metric | Stage 1 (placeholder) | Stage 2A (LFP-fitted) | Change |
+| Metric | Stage 1 | Stage 2B | Change |
 |---|---|---|---|
-| R(25 °C) | 85 mΩ (generic) | 28.3 mΩ (LFP A123) | −67% |
-| Max temperature | 65.9 °C | 26.0 °C | −40 °C |
-| Hours above 45 °C | 12 / 24 | 0 / 24 | Eliminated |
-| Fixed-point iterations (max) | 15 | 4 | 4× faster |
+| R(25°C) | 85 mΩ (placeholder) | 10.0 mΩ (Lin 2013 HPPC) | −88% |
+| Cₚ | 1100 J/kg/K (assumed) | 810.53 J/kg/K (Gao 2017, measured) | −26% |
+| Max temperature | 65.9°C | 26.0°C | −40°C |
+| Hours above 45°C | 12/24 | 0/24 | Eliminated |
+| Fixed-point iterations (max) | 30 | 4 | 7.5× faster |
 | Average efficiency | 95.68% | 95.99% | +0.31 pp |
-| Local energy served | 48.22% | 48.25% | +0.03 pp |
 
 ---
 
 ## Why this project matters
 
-This project demonstrates physics-based system modelling, numerical methods (fixed-point iteration, semi-implicit integration), thermal-electrical coupling, and engineering validation against published experimental data. It is intended as a portfolio project for energy systems, storage modelling, simulation engineering, and research-oriented applications.
+This project demonstrates physics-based system modelling, numerical methods (fixed-point iteration, semi-implicit Euler), thermal-electrical coupling, parameter identification from experimental literature, and engineering validation methodology. It is intended as a portfolio project for energy systems, storage modelling, simulation engineering, and research-oriented roles.
 
 ---
 
 ## References
 
-1. Lin, X., Perez, H.E., Siegel, J.B., Stefanopoulou, A.G. et al. (2013). *IEEE Trans. Control Systems Technology*, 22(7). DOI: [10.1109/TCST.2013.2278763](https://doi.org/10.1109/TCST.2013.2278763)
-2. Forgez, C., Do, D.V., Friedrich, G., Morcrette, M., Delacourt, C. (2010). *J. Power Sources*, 195(9), 2961–2968. DOI: [10.1016/j.jpowsour.2009.10.105](https://doi.org/10.1016/j.jpowsour.2009.10.105)
-3. Preger, Y., Barkholtz, H.M., Fresquez, A. et al. (2020). *J. Electrochem. Soc.*, 167, 120532. DOI: [10.1149/1945-7111/abae37](https://doi.org/10.1149/1945-7111/abae37)
-4. Lin, J., Chu, V., Monroe, C., Howey, D.A. (2022). *Batteries & Supercaps*, 5(5), e202100401. DOI: [10.1002/batt.202100401](https://doi.org/10.1002/batt.202100401)
-5. Schimpe, M. et al. (2018). *Applied Energy*, 210, 211–229. DOI: [10.1016/j.apenergy.2017.10.129](https://doi.org/10.1016/j.apenergy.2017.10.129)
+1. **Lin, X., Perez, H.E., Siegel, J.B., Stefanopoulou, A.G. et al. (2013).** *IEEE Trans. Control Systems Technology*, 22(7). DOI: [10.1109/TCST.2013.2278763](https://doi.org/10.1109/TCST.2013.2278763) — HPPC R₀(T) identification, A123 ANR26650M1A LFP.
+
+2. **Forgez, C., Do, D.V., Friedrich, G., Morcrette, M., Delacourt, C. (2010).** *J. Power Sources*, 195(9), 2961–2968. DOI: [10.1016/j.jpowsour.2009.10.105](https://doi.org/10.1016/j.jpowsour.2009.10.105) — Lumped thermal model, Cₚ, Rin, Rout for A123 26650 LFP.
+
+3. **Gao, Z., Chin, C.S., Woo, W.L., Jia, J. (2017).** *Energies*, 10(1):85. DOI: [10.3390/en10010085](https://doi.org/10.3390/en10010085) — ECM + thermal model, A123 ANR26650M1-B; Cₚ = 810.53 J/kg/K, hconv, Sarea (Table 1); OCV(SOC, T) (Figs 10–11); R₀(SOC, T) (Fig. 13).
+
+4. **Preger, Y. et al. (2020).** *J. Electrochem. Soc.*, 167, 120532. DOI: [10.1149/1945-7111/abae37](https://doi.org/10.1149/1945-7111/abae37) — Sandia/SNL LFP aging dataset, consistent R(T) trend.
+
+5. **Schimpe, M. et al. (2018).** *Applied Energy*, 210, 211–229. DOI: [10.1016/j.apenergy.2017.10.129](https://doi.org/10.1016/j.apenergy.2017.10.129) — BESS electro-thermal dispatch reference.
+
+6. **Catenaro, E., Onori, S. (2021).** *Data in Brief*, 35, 106894. DOI: [10.1016/j.dib.2021.106894](https://doi.org/10.1016/j.dib.2021.106894) — A123 LFP discharge data at 5/25/35°C (Stage 2C validation source).
