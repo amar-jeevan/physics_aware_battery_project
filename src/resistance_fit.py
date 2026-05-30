@@ -1,31 +1,3 @@
-"""
-resistance_fit.py
------------------
-Fits a 2nd-order polynomial R(T) = a0 + a1*T + a2*T^2 to published
-LFP (LiFePO4) internal-resistance vs temperature data and produces
-a validation plot.
-
-Data source
------------
-data/lfp_resistance_temperature.csv
-  A123 ANR26650M1A 2.3 Ah LFP (26650 cylindrical)
-  DC-IR from 10-s pulse at ~50% SOC, fresh cell.
-  Values from Lin et al. (2013), IEEE TCST, DOI: 10.1109/TCST.2013.2278763
-  Consistent with Sandia/Preger 2020 at overlapping temperatures (15/25/35 C).
-
-Stage 2B upgrade
-----------------
-Once CALCE A123 DST files (0-50 C) and Sandia Battery Archive LFP CSV files
-are downloaded, replace the CSV with re-fitted values and rerun this module.
-    CALCE:   https://calce.umd.edu/battery-data
-    Sandia:  https://www.batteryarchive.org/list_data_SNL.html
-
-Usage
------
-    python src/resistance_fit.py                  # print coefficients + save plot
-    from resistance_fit import load_lfp_coefficients_ohm  # import in battery.py
-"""
-
 from pathlib import Path
 import numpy as np
 import pandas as pd
